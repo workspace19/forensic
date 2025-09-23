@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charon - Digital Forensics Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            padding: 15px 20px;
+            border-bottom: 2px solid #404040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .app-title {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .version-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .menu-bar {
+            background: linear-gradient(135deg, #333333, #2a2a2a);
+            padding: 10px 20px;
+            border-bottom: 1px solid #404040;
+            font-size: 14px;
+        }
+
+        .menu-items {
+            display: flex;
+            gap: 30px;
+        }
+
+        .menu-item {
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-item:hover {
+            background: linear-gradient(135deg, #444444, #555555);
+            transform: translateY(-1px);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 160px);
+        }
+
+        .left-panel {
+            width: 320px;
+            background: linear-gradient(180deg, #252525, #1f1f1f);
+            border-right: 2px solid #404040;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #2d2d2d, #252525);
+            padding: 12px 15px;
+            font-weight: 600;
+            border-bottom: 1px solid #404040;
+            font-size: 14px;
+            color: #00d4ff;
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .tree-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .tree-item:hover {
+            background: linear-gradient(135deg, #333333, #2a2a2a);
+            border-color: #555;
+            transform: translateX(5px);
+        }
+
+        .tree-item.selected {
+            background: linear-gradient(135deg, #0066cc, #004499);
+            border-color: #0099ff;
+            box-shadow: 0 2px 10px rgba(0, 102, 204, 0.4);
+            transform: translateX(8px);
+        }
+
+        .tree-item.deleted {
+            color: #ff6b6b;
+            border-color: #ff6b6b33;
+        }
+
+        .tree-icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .tree-name {
+            flex: 1;
+        }
+
+        .tree-size {
+            font-size: 10px;
+            color: #888;
+            margin-left: 10px;
+        }
+
+        .center-panel {
+            flex: 1;
+            background: linear-gradient(180deg, #1e1e1e, #181818);
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #404040;
+        }
+
+        .file-format-section {
+            background: linear-gradient(135deg, #252525, #1f1f1f);
+            border-bottom: 2px solid #404040;
+            padding: 20px;
+        }
+
+        .format-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .format-card {
+            background: linear-gradient(135deg, #2d2d2d, #252525);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #404040;
+            transition: all 0.3s ease;
+        }
+
+        .format-card:hover {
+            transform: translateY(-2px);
+            border-color: #00d4ff;
+        }
+
+        .format-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .format-value {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .preview-section {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .preview-container {
+            background: linear-gradient(135deg, #252525, #1f1f1f);
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #404040;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .preview-tabs {
+            display: flex;
+            gap: 5px;
+            background: #1a1a1a;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .preview-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preview-tab.active {
+            background: linear-gradient(135deg, #0066cc, #004499);
+            color: white;
+        }
+
+        .preview-tab:hover:not(.active) {
+            background: #333;
+            color: #ddd;
+        }
+
+        .preview-content {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 1px solid #333;
+        }
+
+        .hex-viewer {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .hex-offset {
+            color: #666;
+            font-weight: bold;
+        }
+
+        .hex-data {
+            color: #00ff88;
+            letter-spacing: 2px;
+        }
+
+        .hex-ascii {
+            color: #ffaa00;
+        }
+
+        .right-panel {
+            width: 400px;
+            background: linear-gradient(180deg, #252525, #1f1f1f);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .visualization-container {
+            height: 350px;
+            margin: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #404040;
+            background: #1a1a1a;
+            position: relative;
+        }
+
+        #threejs-container {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #2a2a2a 0%, #1a1a1a 100%);
+        }
+
+        .viz-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #00d4ff;
+            z-index: 100;
+        }
+
+        .viz-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            color: #00d4ff;
+            z-index: 100;
+        }
+
+        .analysis-section {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .analysis-container {
+            background: linear-gradient(135deg, #2d2d2d, #252525);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #404040;
+        }
+
+        .analysis-grid {
+            display: grid;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .analysis-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+            font-size: 12px;
+        }
+
+        .analysis-row:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 4px;
+            padding-left: 8px;
+        }
+
+        .analysis-row:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-label {
+            color: #888;
+            font-weight: 500;
+        }
+
+        .analysis-value {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+
+        .threat-low { color: #4CAF50; }
+        .threat-medium { color: #FF9800; }
+        .threat-high { color: #F44336; }
+
+        .status-bar {
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            padding: 12px 20px;
+            border-top: 2px solid #404040;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .status-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            border-top: 2px solid #00d4ff;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <div class="app-title">Charon - Digital Forensics Tool</div>
+            <div class="version-info">v2.0.0 Professional Edition</div>
+        </div>
+
+        <div class="menu-bar">
+            <div class="menu-items">
+                <div class="menu-item" onclick="showAlert('File menu')">File</div>
+                <div class="menu-item" onclick="showAlert('Edit menu')">Edit</div>
+                <div class="menu-item" onclick="showAlert('View menu')">View</div>
+                <div class="menu-item" onclick="showAlert('Tools menu')">Tools</div>
+                <div class="menu-item" onclick="showAlert('Analysis menu')">Analysis</div>
+                <div class="menu-item" onclick="showAlert('Help menu')">Help</div>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <!-- Left Panel - File Structure -->
+            <div class="left-panel">
+                <div class="panel-header">📁 File Structure</div>
+                <div class="file-tree" id="fileTree">
+                    <div class="tree-item">
+                        <span class="tree-icon">💾</span>
+                        <span class="tree-name">disk_image.E01</span>
+                        <span class="tree-size">2.3 GB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 20px;">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-name">Windows</span>
+                        <span class="tree-size">15 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 40px;">
+                        <span class="tree-icon">⚙️</span>
+                        <span class="tree-name">notepad.exe</span>
+                        <span class="tree-size">176 KB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 20px;">
+                        <span class="tree-icon">👤</span>
+                        <span class="tree-name">Users</span>
+                        <span class="tree-size">5 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 40px;">
+                        <span class="tree-icon">📁</span>
+                        <span class="tree-name">Documents</span>
+                        <span class="tree-size">2 MB</span>
+                    </div>
+                    <div class="tree-item selected" style="margin-left: 60px;">
+                        <span class="tree-icon">📄</span>
+                        <span class="tree-name">report.pdf</span>
+                        <span class="tree-size">2.3 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 60px;">
+                        <span class="tree-icon">🖼️</span>
+                        <span class="tree-name">photo.jpg</span>
+                        <span class="tree-size">1.2 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 60px;">
+                        <span class="tree-icon">📊</span>
+                        <span class="tree-name">spreadsheet.xlsx</span>
+                        <span class="tree-size">3.1 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 40px;">
+                        <span class="tree-icon">📦</span>
+                        <span class="tree-name">archive.zip</span>
+                        <span class="tree-size">15 MB</span>
+                    </div>
+                    <div class="tree-item" style="margin-left: 40px;">
+                        <span class="tree-icon">🎵</span>
+                        <span class="tree-name">music.mp3</span>
+                        <span class="tree-size">8.5 MB</span>
+                    </div>
+                    <div class="tree-item deleted" style="margin-left: 20px;">
+                        <span class="tree-icon">🗑️</span>
+                        <span class="tree-name">deleted_file.txt</span>
+                        <span class="tree-size">4 KB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - File Format & Preview -->
+            <div class="center-panel">
+                <!-- File Format Section -->
+                <div class="file-format-section">
+                    <div class="panel-header">📊 File Format Information</div>
+                    <div class="format-grid">
+                        <div class="format-card">
+                            <div class="format-label">Format</div>
+                            <div class="format-value" id="formatType">PDF</div>
+                        </div>
+                        <div class="format-card">
+                            <div class="format-label">Size</div>
+                            <div class="format-value" id="fileSize">2.3 MB</div>
+                        </div>
+                        <div class="format-card">
+                            <div class="format-label">Compression</div>
+                            <div class="format-value" id="compression">Deflate</div>
+                        </div>
+                        <div class="format-card">
+                            <div class="format-label">Hash (MD5)</div>
+                            <div class="format-value" id="hashMd5">Loading...</div>
+                        </div>
+                        <div class="format-card">
+                            <div class="format-label">Created</div>
+                            <div class="format-value" id="dateCreated">2024-03-15</div>
+                        </div>
+                        <div class="format-card">
+                            <div class="format-label">Evidence No.</div>
+                            <div class="format-value" id="evidenceNo">EV-2024-001</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="preview-section">
+                    <div class="preview-container">
+                        <div class="preview-header">
+                            <div class="panel-header">🔍 File Preview</div>
+                            <div class="preview-tabs">
+                                <button class="preview-tab active" onclick="switchTab('hex', this)">Hex View</button>
+                                <button class="preview-tab" onclick="switchTab('text', this)">Text View</button>
+                                <button class="preview-tab" onclick="switchTab('metadata', this)">Metadata</button>
+                                <button class="preview-tab" onclick="switchTab('timeline', this)">Timeline</button>
+                            </div>
+                        </div>
+                        <div class="preview-content" id="previewContent">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - 3D Model & Analysis -->
+            <div class="right-panel">
+                <div class="panel-header">🎮 3D Visualization & Analysis</div>
+                
+                <!-- 3D Visualization -->
+                <div class="visualization-container">
+                    <div id="threejs-container"></div>
+                    <div class="viz-overlay">
+                        <div><strong>3D File Structure</strong></div>
+                        <div style="margin-top: 5px;">
+                            Selected: <span id="selected-file-name">report.pdf</span>
+                        </div>
+                    </div>
+                    <div class="viz-controls">
+                        Mouse: Rotate<br>
+                        Wheel: Zoom<br>
+                        Click: Select
+                    </div>
+                </div>
+
+                <!-- Analysis Section -->
+                <div class="analysis-section">
+                    <div class="analysis-container">
+                        <div class="panel-header">📈 File Analysis</div>
+                        <div class="analysis-grid" id="analysisGrid">
+                            <!-- Analysis data will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-content">
+                <div>
+                    <span class="loading-spinner"></span>
+                    Processing: <span id="currentImage">disk_image.E01</span> | 
+                    Files analyzed: <span id="filesAnalyzed">15,847</span> | 
+                    Current operation: <span id="currentOperation">File analysis</span>
+                </div>
+                <div id="progressPercent">75.2%</div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar" style="width: 75.2%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentTab = 'hex';
+        let selectedFileIndex = 5; // Start with PDF selected
+        let visualizer;
+
+        // File structure data
+        const files = [
+            { name: '💾 disk_image.E01', type: 'disk', size: 2500000000, format: 'E01', isDeleted: false },
+            { name: '📁 Windows', type: 'folder', size: 15000000, format: 'Directory', isDeleted: false },
+            { name: '⚙️ notepad.exe', type: 'executable', size: 179712, format: 'PE', isDeleted: false },
+            { name: '👤 Users', type: 'folder', size: 5000000, format: 'Directory', isDeleted: false },
+            { name: '📁 Documents', type: 'folder', size: 2000000, format: 'Directory', isDeleted: false },
+            { name: '📄 report.pdf', type: 'pdf', size: 2400000, format: 'PDF', isDeleted: false },
+            { name: '🖼️ photo.jpg', type: 'image', size: 1258291, format: 'JPEG', isDeleted: false },
+            { name: '📊 spreadsheet.xlsx', type: 'excel', size: 3250000, format: 'XLSX', isDeleted: false },
+            { name: '📦 archive.zip', type: 'archive', size: 15728640, format: 'ZIP', isDeleted: false },
+            { name: '🎵 music.mp3', type: 'audio', size: 8912896, format: 'MP3', isDeleted: false },
+            { name: '🗑️ deleted_file.txt', type: 'text', size: 4096, format: 'TXT', isDeleted: true }
+        ];
+
+        // 3D Visualizer Class
+        class ForensicFileVisualizer {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.currentFileModel = null;
+            }
+            
+            initialize() {
+                const container = document.getElementById('threejs-container');
+                const rect = container.getBoundingClientRect();
+                
+                this.camera.aspect = rect.width / rect.height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(rect.width, rect.height);
+                this.renderer.setClearColor(0x1a1a1a, 1.0);
+                container.appendChild(this.renderer.domElement);
+                
+                this.camera.position.set(0, 3, 8);
+                this.camera.lookAt(0, 0, 0);
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 10);
+                this.scene.add(directionalLight);
+                
+                // Ground
+                const ground = new THREE.Mesh(
+                    new THREE.PlaneGeometry(20, 20),
+                    new THREE.MeshLambertMaterial({ color: 0x444444, transparent: true, opacity: 0.3 })
+                );
+                ground.rotation.x = -Math.PI / 2;
+                ground.position.y = -3;
+                this.scene.add(ground);
+                
+                this.setupControls(container);
+                this.animate();
+            }
+            
+            setupControls(container) {
+                let isMouseDown = false;
+                let mouseX = 0, mouseY = 0;
+                
+                container.addEventListener('mousedown', (e) => {
+                    isMouseDown = true;
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                });
+                
+                container.addEventListener('mousemove', (e) => {
+                    if (isMouseDown) {
+                        const deltaX = e.clientX - mouseX;
+                        const deltaY = e.clientY - mouseY;
+                        const spherical = new THREE.Spherical();
+                        spherical.setFromVector3(this.camera.position);
+                        spherical.theta -= deltaX * 0.01;
+                        spherical.phi += deltaY * 0.01;
+                        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                        this.camera.position.setFromSpherical(spherical);
+                        this.camera.lookAt(0, 0, 0);
+                        mouseX = e.clientX;
+                        mouseY = e.clientY;
+                    }
+                });
+                
+                container.addEventListener('mouseup', () => isMouseDown = false);
+                container.addEventListener('wheel', (e) => {
+                    const zoom = e.deltaY > 0 ? 1.1 : 0.9;
+                    this.camera.position.multiplyScalar(zoom);
+                    this.camera.position.clampLength(3, 30);
+                    e.preventDefault();
+                });
+            }
+            
+            createModel(file) {
+                const group = new THREE.Group();
+                let geometry, material;
+                
+                switch (file.type) {
+                    case 'pdf':
+                        geometry = new THREE.BoxGeometry(1.5, 2.5, 0.2);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+                        break;
+                    case 'image':
+                        geometry = new THREE.BoxGeometry(1.8, 2.2, 0.15);
+                        material = new THREE.MeshPhongMaterial({ color: 0xffff44 });
+                        break;
+                    case 'executable':
+                        geometry = new THREE.CylinderGeometry(1.0, 1.0, 3.0, 8);
+                        material = new THREE.MeshLambertMaterial({ color: 0x44ffff });
+                        break;
+                    case 'excel':
+                        geometry = new THREE.BoxGeometry(1.6, 2.6, 0.25);
+                        material = new THREE.MeshPhongMaterial({ color: 0x44ff44 });
+                        break;
+                    case 'archive':
+                        geometry = new THREE.BoxGeometry(1.8, 2.2, 1.8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xffaa44 });
+                        break;
+                    case 'audio':
+                        geometry = new THREE.CylinderGeometry(1.2, 1.2, 0.1, 32);
+                        material = new THREE.MeshPhongMaterial({ color: 0xff44ff });
+                        break;
+                    case 'text':
+                        geometry = new THREE.BoxGeometry(1.4, 2.5, 0.15);
+                        material = new THREE.MeshPhongMaterial({ color: file.isDeleted ? 0x666666 : 0x999999, transparent: file.isDeleted, opacity: file.isDeleted ? 0.5 : 1.0 });
+                        break;
+                    case 'folder':
+                        geometry = new THREE.BoxGeometry(2.0, 1.5, 1.0);
+                        material = new THREE.MeshPhongMaterial({ color: 0xFFEB3B });
+                        break;
+                    case 'disk':
+                        geometry = new THREE.BoxGeometry(2.2, 1.5, 3.2);
+                        material = new THREE.MeshPhongMaterial({ color: 0x333333 });
+                        break;
+                    default:
+                        geometry = new THREE.BoxGeometry(1.5, 2.0, 0.3);
+                        material = new THREE.MeshLambertMaterial({ color: 0x888888 });
+                }
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                group.add(mesh);
+                return group;
+            }
+            
+            loadFile(file) {
+                if (this.currentFileModel) {
+                    this.scene.remove(this.currentFileModel);
+                }
+                
+                this.currentFileModel = this.createModel(file);
+                this.currentFileModel.position.set(0, 0, 0);
+                this.scene.add(this.currentFileModel);
+                this.animateEntrance();
+            }
+            
+            animateEntrance() {
+                if (!this.currentFileModel) return;
+                
+                this.currentFileModel.position.y = 3;
+                this.currentFileModel.scale.set(0.1, 0.1, 0.1);
+                
+                const startTime = Date.now();
+                const duration = 1000;
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    
+                    if (this.currentFileModel) {
+                        this.currentFileModel.position.y = 3 * (1 - easeOut);
+                        const scale = 0.1 + (0.9 * easeOut);
+                        this.currentFileModel.scale.set(scale, scale, scale);
+                    }
+                    
+                    if (progress < 1) requestAnimationFrame(animate);
+                };
+                animate();
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                if (this.currentFileModel) {
+                    const time = Date.now() * 0.001;
+                    this.currentFileModel.position.y += Math.sin(time * 0.8) * 0.002;
+                    this.currentFileModel.rotation.y += 0.005;
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Core functions
+        function init() {
+            populateFileTree();
+            
+            visualizer = new ForensicFileVisualizer();
+            visualizer.initialize();
+            
+            selectFile(selectedFileIndex);
+            startProgressAnimation();
+            
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function populateFileTree() {
+            const treeContainer = document.getElementById('fileTree');
+            treeContainer.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const treeItem = document.createElement('div');
+                treeItem.className = `tree-item ${file.isDeleted ? 'deleted' : ''}`;
+                if (index > 0) treeItem.style.marginLeft = `${Math.min(index * 10, 60)}px`;
+                treeItem.onclick = () => selectFile(index);
+                
+                const iconMatch = file.name.match(/^(.+?)\s/);
+                const icon = iconMatch ? iconMatch[1] : '📄';
+                const name = file.name.replace(/^.+?\s/, '');
+                
+                treeItem.innerHTML = `
+                    <span class="tree-icon">${icon}</span>
+                    <span class="tree-name">${name}</span>
+                    <span class="tree-size">${formatFileSize(file.size)}</span>
+                `;
+                
+                treeContainer.appendChild(treeItem);
+            });
+        }
+
+        function selectFile(index) {
+            selectedFileIndex = index;
+            const file = files[index];
+            
+            document.querySelectorAll('.tree-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+            
+            updateFileFormat(file);
+            updatePreview(file);
+            updateAnalysis(file);
+            
+            if (visualizer) visualizer.loadFile(file);
+            
+            const nameEl = document.getElementById('selected-file-name');
+            if (nameEl) nameEl.textContent = file.name.replace(/^.+?\s/, '');
+        }
+
+        function updateFileFormat(file) {
+            document.getElementById('formatType').textContent = file.format;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('dateCreated').textContent = new Date().toLocaleDateString();
+            
+            const compressions = {
+                'JPEG': 'JPEG Lossy',
+                'PDF': 'Deflate/LZW', 
+                'E01': 'ZLIB Level 6',
+                'ZIP': 'DEFLATE',
+                'MP3': 'MPEG Layer-3',
+                'PE': 'None',
+                'XLSX': 'ZIP/Deflate'
+            };
+            document.getElementById('compression').textContent = compressions[file.format] || 'None';
+            
+            setTimeout(() => {
+                const hash = generateHash(file.name + file.size);
+                document.getElementById('hashMd5').textContent = hash.substring(0, 16) + '...';
+            }, 300);
+        }
+
+        function switchTab(tabName, tabElement) {
+            currentTab = tabName;
+            
+            document.querySelectorAll('.preview-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+            
+            updatePreview(files[selectedFileIndex]);
+        }
+
+        function updatePreview(file) {
+            const content = document.getElementById('previewContent');
+            
+            switch (currentTab) {
+                case 'hex':
+                    content.innerHTML = generateHexView(file);
+                    break;
+                case 'text':
+                    content.innerHTML = generateTextView(file);
+                    break;
+                case 'metadata':
+                    content.innerHTML = generateMetadataView(file);
+                    break;
+                case 'timeline':
+                    content.innerHTML = generateTimelineView(file);
+                    break;
+            }
+        }
+
+        function generateHexView(file) {
+            const hexData = generateMockHex(file);
+            let html = '<div class="hex-viewer">';
+            
+            for (let i = 0; i < 8; i++) {
+                const offset = (i * 16).toString(16).padStart(8, '0').toUpperCase();
+                let hexLine = '', asciiLine = '';
+                
+                for (let j = 0; j < 16; j++) {
+                    const byte = hexData[i * 16 + j] || 0;
+                    hexLine += byte.toString(16).padStart(2, '0').toUpperCase() + ' ';
+                    asciiLine += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                }
+                
+                html += `
+                    <div class="hex-offset">${offset}</div>
+                    <div class="hex-data">${hexLine}</div>
+                    <div class="hex-ascii">${asciiLine}</div>
+                `;
+            }
+            
+            return html + '</div>';
+        }
+
+        function generateTextView(file) {
+            const previews = {
+                'pdf': 'FORENSIC INVESTIGATION REPORT\nDocument Classification: CONFIDENTIAL\nCase Number: 2024-INV-001\n\nThis report contains findings from digital forensic examination...',
+                'image': 'JPEG Image Analysis:\nDimensions: 1920x1080 pixels\nEXIF Data: Camera Make: Canon, Model: EOS R5\nGPS: 37.7749° N, 122.4194° W\nDate: 2024-03-10 14:25:33',
+                'executable': 'PE Executable Analysis:\nThis program cannot be run in DOS mode.\nMachine Type: x64 (AMD64)\nEntry Point: 0x1000\nSubsystem: Windows GUI',
+                'excel': 'Excel Spreadsheet:\nWorksheets: 3\nFormulas: 45 detected\nMacros: VBA macros found\n\nSheet 1: Financial Summary\nQ1 2024: $125,000 revenue',
+                'audio': 'MP3 Audio File:\nBitrate: 320 kbps\nDuration: 4:32\nTitle: "Meeting Recording"\nContent: Voice conversation detected',
+                'archive': 'ZIP Archive Contents:\n- financial_report.pdf (2.3 MB)\n- evidence_photos/ (5 files)\n- database_backup.sql (4.5 MB)',
+                'text': file.isDeleted ? '[RECOVERED] Meeting Notes\nSome corruption possible...\nContent partially recovered' : 'Meeting Notes - Project Phoenix\nDate: 2024-03-10\nAttendees: John Smith, Sarah Johnson',
+                'folder': 'Directory Listing:\nContains: 8 files, 3 subdirectories\nTotal Size: ' + formatFileSize(file.size),
+                'disk': 'Disk Image Analysis:\nFormat: Expert Witness (E01)\nSectors: ' + Math.floor(file.size / 512).toLocaleString() + '\nFile System: NTFS\nPartitions: 3 found'
+            };
+            
+            return `<div style="color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; white-space: pre-line;">${previews[file.type] || 'Binary file - use hex view for analysis'}</div>`;
+        }
+
+        function generateMetadataView(file) {
+            const created = new Date(Date.now() - Math.random() * 86400000 * 30);
+            const modified = new Date(created.getTime() + Math.random() * 86400000 * 5);
+            
+            return `
+                <div style="color: #e0e0e0; line-height: 1.8;">
+                    <div style="color: #00d4ff; font-weight: bold; margin-bottom: 15px;">File System Metadata</div>
+                    <div><strong>Created:</strong> ${created.toLocaleString()}</div>
+                    <div><strong>Modified:</strong> ${modified.toLocaleString()}</div>
+                    <div><strong>Owner:</strong> ${file.type === 'executable' ? 'SYSTEM' : 'Users\\John'}</div>
+                    <div><strong>Attributes:</strong> ${file.isDeleted ? 'Deleted, Archive' : 'Archive'}</div>
+                    <div><strong>Path:</strong> ${getFilePath(file)}</div>
+                    <div><strong>Allocation:</strong> ${file.isDeleted ? 'Unallocated (Recovered)' : 'Allocated'}</div>
+                    <div><strong>Clusters:</strong> ${Math.ceil(file.size / 4096).toLocaleString()}</div>
+                    <div><strong>MFT Entry:</strong> ${Math.floor(Math.random() * 99999) + 10000}</div>
+                </div>
+            `;
+        }
+
+        function generateTimelineView(file) {
+            const events = [
+                { time: '2024-03-10 10:25:33', event: 'File created', color: '#4CAF50' },
+                { time: '2024-03-12 15:30:12', event: 'File modified', color: '#FF9800' },
+                { time: '2024-03-15 08:15:45', event: 'File accessed', color: '#2196F3' },
+                { time: '2024-03-15 14:22:18', event: 'Forensic analysis started', color: '#9C27B0' }
+            ];
+            
+            if (file.isDeleted) {
+                events.push(
+                    { time: '2024-03-15 16:45:22', event: 'File deleted', color: '#F44336' },
+                    { time: '2024-03-15 18:12:15', event: 'File recovered', color: '#00BCD4' }
+                );
+            }
+            
+            let html = '<div style="color: #e0e0e0;"><div style="color: #00d4ff; font-weight: bold; margin-bottom: 15px;">File Activity Timeline</div>';
+            events.forEach(event => {
+                html += `<div style="margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.3); border-left: 3px solid ${event.color}; border-radius: 4px;">
+                    <div style="font-weight: bold; color: ${event.color};">${event.time}</div>
+                    <div style="margin-top: 4px;">${event.event}</div>
+                </div>`;
+            });
+            return html + '</div>';
+        }
+
+        function updateAnalysis(file) {
+            const entropy = calculateEntropy(file);
+            const threatLevel = getThreatLevel(file, entropy);
+            const threatClass = `threat-${threatLevel.toLowerCase()}`;
+            
+            const analysisData = [
+                { label: 'File Type', value: getFileDescription(file.type) },
+                { label: 'Size', value: formatFileSize(file.size) },
+                { label: 'Entropy', value: `${entropy}/8.0` },
+                { label: 'Threat Level', value: `<span class="${threatClass}">${threatLevel}</span>` },
+                { label: 'Allocation', value: file.isDeleted ? 'Unallocated' : 'Allocated' },
+                { label: 'Clusters', value: Math.ceil(file.size / 4096).toLocaleString() }
+            ];
+            
+            // Add type-specific analysis
+            if (file.type === 'executable') {
+                analysisData.splice(2, 0,
+                    { label: 'Architecture', value: 'x86-64' },
+                    { label: 'Packed', value: entropy > 7.5 ? 'Yes' : 'No' },
+                    { label: 'Signature', value: 'Valid' }
+                );
+            } else if (file.type === 'pdf') {
+                analysisData.splice(2, 0,
+                    { label: 'Version', value: '1.7' },
+                    { label: 'Pages', value: Math.floor(Math.random() * 20) + 1 },
+                    { label: 'JavaScript', value: Math.random() > 0.8 ? 'Present' : 'None' }
+                );
+            } else if (file.type === 'image') {
+                analysisData.splice(2, 0,
+                    { label: 'Dimensions', value: '1920x1080' },
+                    { label: 'Color Depth', value: '24-bit RGB' },
+                    { label: 'EXIF Data', value: 'Present' }
+                );
+            }
+            
+            document.getElementById('analysisGrid').innerHTML = analysisData.map(item => `
+                <div class="analysis-row">
+                    <span class="analysis-label">${item.label}</span>
+                    <span class="analysis-value">${item.value}</span>
+                </div>
+            `).join('');
+        }
+
+        // Helper functions
+        function formatFileSize(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unitIndex = 0;
+            
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            
+            return size.toFixed(unitIndex === 0 ? 0 : 1) + ' ' + units[unitIndex];
+        }
+
+        function generateHash(input) {
+            let hash = 0;
+            for (let i = 0; i < input.length; i++) {
+                hash = ((hash << 5) - hash + input.charCodeAt(i)) & 0xffffffff;
+            }
+            return Math.abs(hash).toString(16).padStart(8, '0').repeat(4);
+        }
+
+        function generateMockHex(file) {
+            const signatures = {
+                'PDF': [0x25, 0x50, 0x44, 0x46],
+                'JPEG': [0xFF, 0xD8, 0xFF, 0xE0],
+                'PE': [0x4D, 0x5A],
+                'ZIP': [0x50, 0x4B, 0x03, 0x04]
+            };
+            
+            const data = new Uint8Array(128);
+            const sig = signatures[file.format] || [];
+            
+            for (let i = 0; i < sig.length; i++) {
+                data[i] = sig[i];
+            }
+            
+            for (let i = sig.length; i < data.length; i++) {
+                data[i] = Math.floor(Math.random() * 256);
+            }
+            
+            return data;
+        }
+
+        function calculateEntropy(file) {
+            const baseEntropy = {
+                'executable': 6.2, 'image': 7.9, 'audio': 7.7, 'archive': 7.6,
+                'pdf': 6.8, 'excel': 6.4, 'text': 4.8, 'folder': 0, 'disk': 6.9
+            };
+            
+            let entropy = baseEntropy[file.type] || 6.0;
+            if (file.isDeleted) entropy -= 0.3;
+            return Math.max(0, Math.min(8, entropy + (Math.random() - 0.5) * 0.4)).toFixed(1);
+        }
+
+        function getThreatLevel(file, entropy) {
+            if (file.isDeleted) return 'Medium';
+            if (file.type === 'executable' && entropy > 7.5) return 'High';
+            if (entropy > 7.8) return 'Medium';
+            return 'Low';
+        }
+
+        function getFileDescription(type) {
+            const descriptions = {
+                'executable': 'PE Executable', 'image': 'JPEG Image', 'pdf': 'PDF Document',
+                'excel': 'Excel Spreadsheet', 'audio': 'MP3 Audio', 'archive': 'ZIP Archive',
+                'text': 'Text File', 'folder': 'Directory', 'disk': 'Disk Image'
+            };
+            return descriptions[type] || 'Unknown';
+        }
+
+        function getFilePath(file) {
+            const paths = {
+                'disk': '\\',
+                'folder': '\\Windows\\',
+                'executable': '\\Windows\\System32\\',
+                'pdf': '\\Users\\John\\Documents\\',
+                'image': '\\Users\\John\\Pictures\\',
+                'text': '\\Users\\John\\Desktop\\'
+            };
+            return paths[file.type] || '\\Users\\John\\';
+        }
+
+        function startProgressAnimation() {
+            let progress = 75.2;
+            setInterval(() => {
+                progress += (Math.random() - 0.5) * 2;
+                progress = Math.max(0, Math.min(100, progress));
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('progressPercent').textContent = progress.toFixed(1) + '%';
+            }, 3000);
+        }
+
+        function handleKeyPress(event) {
+            switch (event.key) {
+                case 'ArrowUp':
+                    if (selectedFileIndex > 0) selectFile(selectedFileIndex - 1);
+                    break;
+                case 'ArrowDown':
+                    if (selectedFileIndex < files.length - 1) selectFile(selectedFileIndex + 1);
+                    break;
+                case '1': case '2': case '3': case '4':
+                    const tabs = ['hex', 'text', 'metadata', 'timeline'];
+                    const tabElements = document.querySelectorAll('.preview-tab');
+                    const index = parseInt(event.key) - 1;
+                    if (tabElements[index]) switchTab(tabs[index], tabElements[index]);
+                    break;
+            }
+        }
+
+        function showAlert(message) {
+            alert(`${message} - Feature available in full version`);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('resize', () => {
+            if (visualizer && visualizer.renderer) {
+                const container = document.getElementById('threejs-container');
+                const rect = container.getBoundingClientRect();
+                visualizer.camera.aspect = rect.width / rect.height;
+                visualizer.camera.updateProjectionMatrix();
+                visualizer.renderer.setSize(rect.width, rect.height);
+            }
+        });
+    </script>
+</body>
+</html>
+                
